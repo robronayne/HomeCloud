@@ -18,7 +18,7 @@ Run [Immich](https://immich.app/) on your computer with AWS S3 for cloud storage
 │  │  │ :2283    │            │            │        │   │     │
 │  │  └──────────┴────────────┴────────────┴────────┘   │     │
 │  │                                                    │     │
-│  │  S3 Sync Container (daily at 2 AM)                 │     │
+│  │  S3 Sync (monthly + quarterly)                     │     │
 │  └────────────────────────────────────────────────────┘     │
 │                                                             │
 │  Local Storage: thumbnails, database, cache                 │
@@ -32,33 +32,29 @@ Run [Immich](https://immich.app/) on your computer with AWS S3 for cloud storage
     │   Primary Bucket              Backup Bucket              │
     │   (us-west-1)                 (us-west-2)                │
     │   ┌─────────────────┐        ┌─────────────────┐         │
-    │   │ Daily uploads   │───────▶│ Auto-replicated │         │
-    │   │ Fast access     │  CRR   │Disaster recovery│         │
-    │   └─────────────────┘        └────────┬────────┘         │
-    │                                       │                  │
-    │                                       ▼                  │
-    │                              ┌─────────────────┐         │
-    │                              │ Glacier Archive │         │
-    │                              │ (after 90 days) │         │
-    │                              └─────────────────┘         │
+    │   │Monthly backups  │  CRR   │ Auto-replicated │         │
+    │   │ Standard-IA     │───────▶│ Deep Archive    │         │
+    │   └─────────────────┘ (AWS)  └─────────────────┘         │
+    │                                                           │
+    │   Immich only syncs here     AWS handles this            │
     └──────────────────────────────────────────────────────────┘
 ```
 
 ### Two-Bucket Architecture Explained
 
-This setup uses **two S3 buckets in different AWS regions** for disaster recovery:
+This setup uses **two S3 buckets in different AWS regions** with AWS-managed replication:
 
 #### Primary Bucket (us-west-1 - N. California)
-- **Purpose**: Daily uploads from your Immich server
+- **Purpose**: Monthly backups from your Immich server
 - **Location**: Closest to San Diego for fast uploads
-- **Storage**: S3 Standard (immediate access)
-- **Your app uses this**: `docker/.env` points to primary bucket
+- **Storage**: S3 Standard-IA (infrequent access, cost-optimized)
+- **Sync**: Every 30 days from local
 
 #### Backup Bucket (us-west-2 - Oregon)
-- **Purpose**: Disaster recovery copy
+- **Purpose**: Automatic disaster recovery copy
 - **Location**: Different region (survives regional outages)
-- **Storage**: S3 Standard-IA (cheaper, still instant access)
-- **Auto-replicated**: AWS copies every file automatically via CRR
+- **Storage**: Glacier Deep Archive (lowest cost, 12-48hr restore time)
+- **Replication**: Automatic via AWS Cross-Region Replication (CRR)
 
 #### Photo Upload & Backup Flow
 
@@ -85,7 +81,7 @@ This setup uses **two S3 buckets in different AWS regions** for disaster recover
     │                      │ (local disk) │                    │
     │                      └────┬─────────┘                    │
     │                           │                              │
-    │                           │  2. Daily sync (2 AM)        │
+    │                           │  2. Monthly sync             │
     │                      ┌────▼─────┐                        │
     │                      │ s3-sync  │                        │
     │                      │container │                        │
@@ -97,33 +93,27 @@ This setup uses **two S3 buckets in different AWS regions** for disaster recover
     │                           │                         │  Primary    │
     │                           │                         │  Bucket     │
     │                           │                         │ (us-west-1) │
-    │                           │                         │  Standard   │
+    │                           │                         │Standard-IA  │
     │                           │                         └────┬────────┘
     │                           │                              │
-    │                           │                              │ CRR
-    │                           │                              │ (auto)
+    │                           │                              │ AWS CRR
+    │                           │                              │ (real-time)
     │                           │                         ┌────▼────────┐
     │                           │                         │  Backup     │
     │                           │                         │  Bucket     │
     │                           │                         │ (us-west-2) │
-    │                           │                         │Standard-IA  │
-    │                           │                         └────┬────────┘
-    │                           │                              │
-    │                           │                              │ 90 days
-    │                           │                              │
-    │                           │                         ┌────▼────────┐
-    │                           │                         │  Glacier    │
+    │                           │                         │Glacier Deep │
     │                           │                         │  Archive    │
-    │                           │                         │ (us-west-2) │
-    │                           │                         │Deep Archive │
     │                           │                         └─────────────┘
+    │                           │                              │
+    │                           │                         (AWS managed)
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │  KEY POINTS:                                                         │
 │  • Photos stored locally first (instant access)                      │
-│  • Daily S3 sync at 2 AM (low network usage)                         │
-│  • Cross-region replication happens automatically                    │
-│  • Glacier archival after 90 days (cost savings)                     │
+│  • Monthly sync to primary bucket (Standard-IA)                      │
+│  • Automatic replication to backup (Glacier Deep Archive via CRR)    │
+│  • Max data loss: 30 days (time between monthly syncs)               │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -140,11 +130,17 @@ This setup uses **two S3 buckets in different AWS regions** for disaster recover
 
 | Component | Storage | Cost/Month |
 |-----------|---------|------------|
-| Primary bucket | 100GB Standard | $2.30 |
-| Backup bucket | 100GB Standard-IA | $1.25 |
+| Primary bucket | 100GB Standard-IA | $1.25 |
+| Backup bucket | 100GB Glacier Deep Archive | $0.10 |
 | Replication (one-time) | 100GB transfer | $1.00 (one-time) |
-| Glacier (after 90 days) | 100GB Deep Archive | $0.10 |
-| **Total ongoing** | | **~$3.65/month** |
+| **Total ongoing** | | **~$1.35/month** |
+
+**Cost Savings:**
+- Monthly backups: Fewer API calls than daily
+- Standard-IA for primary: 46% cheaper than Standard ($1.25 vs $2.30)
+- Glacier Deep Archive for backup: 92% cheaper than Standard-IA ($0.10 vs $1.25)
+- AWS CRR: Automatic replication included in storage costs
+- **Total savings: ~63% vs daily Standard storage**
 
 #### Region Selection Guide
 
@@ -327,12 +323,12 @@ The sync is handled by a **separate Docker container** (`s3-sync`), not by Immic
 |-----------|--------------|
 | **Phone app** | Uploads photos to Immich server (instant) |
 | **Immich server** | Stores photos in `docker/upload/` folder |
-| **s3-sync container** | Runs `aws s3 sync` once daily at 2 AM |
+| **s3-sync container** | Monthly sync to primary bucket |
 | **AWS S3** | Cloud backup (primary + disaster recovery) |
 
 ### Sync Schedule
 
-- **Automatic**: Daily at 2 AM (configurable in `docker-compose.yml`)
+- **Automatic**: Monthly to primary (AWS handles backup replication)
 - **Manual**: Run `make sync-now` to force immediate sync
 - **Direction**: One-way (local → S3)
 
@@ -340,10 +336,10 @@ The sync is handled by a **separate Docker container** (`s3-sync`), not by Immic
 
 ```bash
 make logs-sync
-# Shows: "Syncing to S3... Sync complete. Next sync in 24 hours (2 AM)."
+# Shows: "Sync complete. Next sync in 30 days."
 ```
 
-### Why Daily Instead of Real-Time?
+### Why Monthly Instead of Real-Time?
 
 | Benefit | Explanation |
 |---------|-------------|

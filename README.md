@@ -84,7 +84,7 @@ Windows Computer (26TB SSD)
 │       │           26TB SSD Storage        │
 │       │           (local only)            │
 │       │                                   │
-│       │ Daily S3 Sync (photos only)       │
+│       │ Monthly S3 Sync (photos only)     │
 │       └──────────────────┐                │
 └───────────────────────────────────────────┘
                            │
@@ -92,10 +92,15 @@ Windows Computer (26TB SSD)
                     ┌─────────────┐
                     │   AWS S3    │
                     │ Photo Backup│
-                    │  us-west-1  │
-                    │      ↓      │
-                    │  us-west-2  │
-                    │   (backup)  │
+                    │             │
+                    │ Primary     │
+                    │ us-west-1   │
+                    │      │      │
+                    │      │ CRR  │
+                    │      ▼      │
+                    │  Backup     │
+                    │ us-west-2   │
+                    │ (Glacier)   │
                     └─────────────┘
 ```
 
