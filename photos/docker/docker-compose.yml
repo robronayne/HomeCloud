@@ -62,8 +62,9 @@ services:
     restart: always
 
   # ---------------------------------------------------------------------------
-  # S3 Sync - Backs up photos to S3 once daily at 2 AM
+  # S3 Sync - Monthly backup to primary bucket
   # ---------------------------------------------------------------------------
+  # AWS handles replication to backup bucket automatically via CRR
   s3-sync:
     container_name: immich_s3_sync
     image: amazon/aws-cli:latest
@@ -78,10 +79,10 @@ services:
     command:
       - |
         while true; do
-          echo "Syncing to S3..."
-          aws s3 sync /upload s3://$${S3_BUCKET}/upload --storage-class STANDARD
-          echo "Sync complete. Next sync in 24 hours (2 AM)."
-          sleep 86400
+          echo "Syncing local photos to primary S3 bucket..."
+          aws s3 sync /upload s3://$${S3_BUCKET}/upload --storage-class STANDARD_IA
+          echo "Sync complete. Next sync in 30 days."
+          sleep 2592000
         done
     restart: always
     depends_on:

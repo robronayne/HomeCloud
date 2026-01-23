@@ -1,13 +1,13 @@
 # =============================================================================
-# S3 Buckets - Primary (daily use) + Backup (disaster recovery)
+# S3 Buckets - Primary (monthly backups) + Backup (disaster recovery)
 # =============================================================================
 # Primary: us-west-1 (N. California) - closest to San Diego
 # Backup:  us-west-2 (Oregon) - different region for redundancy
-# Cross-region replication automatically copies to backup bucket
+# Cross-region replication (CRR) automatically copies to backup bucket
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Primary Bucket (Daily Use)
+# Primary Bucket (Monthly Backups - Infrequent Access)
 # -----------------------------------------------------------------------------
 resource "aws_s3_bucket" "primary" {
   provider = aws.primary
@@ -15,7 +15,7 @@ resource "aws_s3_bucket" "primary" {
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-primary"
-    Type = "primary"
+    Type = "primary-infrequent-access"
   })
 }
 
@@ -48,6 +48,35 @@ resource "aws_s3_bucket_public_access_block" "primary" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+# Lifecycle: Transition to Infrequent Access immediately
+resource "aws_s3_bucket_lifecycle_configuration" "primary" {
+  provider = aws.primary
+  bucket   = aws_s3_bucket.primary.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    transition {
+      days          = 0
+      storage_class = "STANDARD_IA"
+    }
+
+    noncurrent_version_transition {
+      noncurrent_days = 0
+      storage_class   = "STANDARD_IA"
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 365
+    }
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -94,26 +123,26 @@ resource "aws_s3_bucket_public_access_block" "backup" {
   restrict_public_buckets = true
 }
 
-# Lifecycle on backup: Archive to Glacier Deep Archive
+# Lifecycle: Immediate transition to Glacier Deep Archive
 resource "aws_s3_bucket_lifecycle_configuration" "backup" {
   provider = aws.backup
   bucket   = aws_s3_bucket.backup.id
 
   rule {
-    id     = "archive-to-glacier"
-    status = var.enable_glacier_archive ? "Enabled" : "Disabled"
+    id     = "immediate-deep-archive"
+    status = "Enabled"
 
     filter {
       prefix = ""
     }
 
     transition {
-      days          = var.archive_after_days
+      days          = 0
       storage_class = "DEEP_ARCHIVE"
     }
 
     noncurrent_version_transition {
-      noncurrent_days = 30
+      noncurrent_days = 0
       storage_class   = "DEEP_ARCHIVE"
     }
 
@@ -193,7 +222,7 @@ resource "aws_s3_bucket_replication_configuration" "primary_to_backup" {
 
     destination {
       bucket        = aws_s3_bucket.backup.arn
-      storage_class = "STANDARD_IA"  # Cheaper for backup
+      storage_class = "DEEP_ARCHIVE"  # Replicate directly to Glacier Deep Archive
     }
   }
 }
