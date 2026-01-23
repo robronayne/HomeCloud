@@ -1,0 +1,92 @@
+# =============================================================================
+# Immich Docker Compose - Local Server with S3 Storage
+# =============================================================================
+# Run on your computer, stores photos in AWS S3
+# =============================================================================
+
+name: immich
+
+services:
+  # ---------------------------------------------------------------------------
+  # Immich Server
+  # ---------------------------------------------------------------------------
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    volumes:
+      - ./upload:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    ports:
+      - "2283:2283"
+    depends_on:
+      - redis
+      - database
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Immich Machine Learning (face detection, search)
+  # ---------------------------------------------------------------------------
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    volumes:
+      - ./model-cache:/cache
+    env_file:
+      - .env
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  database:
+    container_name: immich_postgres
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_DB: ${DB_DATABASE_NAME:-immich}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache
+  # ---------------------------------------------------------------------------
+  redis:
+    container_name: immich_redis
+    image: redis:6.2-alpine
+    volumes:
+      - ./redis:/data
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # S3 Sync - Backs up photos to S3 once daily at 2 AM
+  # ---------------------------------------------------------------------------
+  s3-sync:
+    container_name: immich_s3_sync
+    image: amazon/aws-cli:latest
+    volumes:
+      - ./upload:/upload:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET=${S3_BUCKET}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          echo "Syncing to S3..."
+          aws s3 sync /upload s3://$${S3_BUCKET}/upload --storage-class STANDARD
+          echo "Sync complete. Next sync in 24 hours (2 AM)."
+          sleep 86400
+        done
+    restart: always
+    depends_on:
+      - immich-server
+
+networks:
+  default:
+    name: immich_network

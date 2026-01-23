@@ -1,0 +1,18 @@
+# Docker - Immich Service
+# =============================================================================
+
+# Environment files (contain AWS credentials and DB passwords)
+.env
+
+# Keep the example template
+!.env.example
+
+# Docker data directories (generated at runtime)
+upload/
+model-cache/
+postgres/
+redis/
+
+# Docker logs
+*.log
+logs/
