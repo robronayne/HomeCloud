@@ -1,0 +1,27 @@
+# HomeCloud - Root .gitignore
+# =============================================================================
+# Generic patterns for OS, IDE, and temporary files
+# =============================================================================
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
