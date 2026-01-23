@@ -1,0 +1,32 @@
+# Terraform - AWS S3 Infrastructure
+# =============================================================================
+
+# Terraform state files (contain resource IDs and metadata)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive configuration files (contain AWS credentials, bucket names, etc.)
+terraform.tfvars
+*.auto.tfvars
+secrets.tf
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform CLI configuration
+.terraformrc
+terraform.rc
+
+# Terraform crash logs
+crash.log
+crash.*.log
+
+# Ignore any .tfvars files (may contain sensitive data)
+# Keep the example file
+!terraform.tfvars.example

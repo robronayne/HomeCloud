@@ -1,0 +1,39 @@
+# =============================================================================
+# Immich Hybrid Model - Root .gitignore
+# =============================================================================
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/*.zip
+
+# Docker data directories
+docker/.env
+docker/upload/
+docker/model-cache/
+docker/postgres/
+docker/redis/
+
+# Database backups
+backup_*.sql
+*.sql.gz
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Keys and secrets
+*.pem
+*.key
