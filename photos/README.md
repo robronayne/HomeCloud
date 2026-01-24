@@ -35,7 +35,7 @@ Run [Immich](https://immich.app/) on your computer with AWS S3 for cloud storage
     │   │Monthly backups  │  CRR   │ Auto-replicated │         │
     │   │ Standard-IA     │───────▶│ Deep Archive    │         │
     │   └─────────────────┘ (AWS)  └─────────────────┘         │
-    │                                                           │
+    │                                                          │
     │   Immich only syncs here     AWS handles this            │
     └──────────────────────────────────────────────────────────┘
 ```
@@ -47,7 +47,7 @@ This setup uses **two S3 buckets in different AWS regions** with AWS-managed rep
 #### Primary Bucket (us-west-1 - N. California)
 - **Purpose**: Monthly backups from your Immich server
 - **Location**: Closest to San Diego for fast uploads
-- **Storage**: S3 Standard-IA (infrequent access, cost-optimized)
+- **Storage**: S3 Standard (first 30 days) → Standard-IA (after 30 days)
 - **Sync**: Every 30 days from local
 
 #### Backup Bucket (us-west-2 - Oregon)
@@ -111,7 +111,7 @@ This setup uses **two S3 buckets in different AWS regions** with AWS-managed rep
 ┌──────────────────────────────────────────────────────────────────────┐
 │  KEY POINTS:                                                         │
 │  • Photos stored locally first (instant access)                      │
-│  • Monthly sync to primary bucket (Standard-IA)                      │
+│  • Monthly sync to primary bucket (Standard → Standard-IA)           │
 │  • Automatic replication to backup (Glacier Deep Archive via CRR)    │
 │  • Max data loss: 30 days (time between monthly syncs)               │
 └──────────────────────────────────────────────────────────────────────┘
@@ -130,17 +130,18 @@ This setup uses **two S3 buckets in different AWS regions** with AWS-managed rep
 
 | Component | Storage | Cost/Month |
 |-----------|---------|------------|
-| Primary bucket | 100GB Standard-IA | $1.25 |
+| Primary bucket (first 30 days) | 100GB Standard | $2.30 |
+| Primary bucket (after 30 days) | 100GB Standard-IA | $1.25 |
 | Backup bucket | 100GB Glacier Deep Archive | $0.10 |
 | Replication (one-time) | 100GB transfer | $1.00 (one-time) |
-| **Total ongoing** | | **~$1.35/month** |
+| **Total ongoing (month 2+)** | | **~$1.35/month** |
 
 **Cost Savings:**
 - Monthly backups: Fewer API calls than daily
-- Standard-IA for primary: 46% cheaper than Standard ($1.25 vs $2.30)
+- Auto-transition to Standard-IA: 46% cheaper after 30 days ($1.25 vs $2.30)
 - Glacier Deep Archive for backup: 92% cheaper than Standard-IA ($0.10 vs $1.25)
 - AWS CRR: Automatic replication included in storage costs
-- **Total savings: ~63% vs daily Standard storage**
+- **Total savings: ~63% vs daily Standard storage (after first month)**
 
 #### Region Selection Guide
 
