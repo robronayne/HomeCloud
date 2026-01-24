@@ -50,7 +50,7 @@ resource "aws_s3_bucket_public_access_block" "primary" {
   restrict_public_buckets = true
 }
 
-# Lifecycle: Transition to Infrequent Access immediately
+# Lifecycle: Transition to Infrequent Access after 30 days (AWS minimum)
 resource "aws_s3_bucket_lifecycle_configuration" "primary" {
   provider = aws.primary
   bucket   = aws_s3_bucket.primary.id
@@ -64,12 +64,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "primary" {
     }
 
     transition {
-      days          = 0
+      days          = 30
       storage_class = "STANDARD_IA"
     }
 
     noncurrent_version_transition {
-      noncurrent_days = 0
+      noncurrent_days = 30
       storage_class   = "STANDARD_IA"
     }
 

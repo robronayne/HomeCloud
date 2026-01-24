@@ -108,7 +108,7 @@ Windows Computer (26TB SSD)
 - Only photos/videos backed up to AWS S3 (critical personal data)
 - Movies, TV, books, music stored on 26TB SSD only (replaceable content)
 - All services auto-start on Windows boot
-- Monthly cost: ~$3.65 for photo backup only
+- Monthly cost: ~$1.35 for photo backup (after first month)
 
 ---
 
