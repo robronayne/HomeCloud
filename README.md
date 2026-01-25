@@ -10,13 +10,13 @@
 
 Build a complete home media server and backup solution with minimal monthly costs:
 
-- **Photos & Videos**: Cloud backup with disaster recovery (~$3.65/month for 100GB)
+- **Photos & Videos**: Local SSD primary + cold storage backup (~$0.20/month for 100GB)
 - **Movies, TV, Books, Music**: Local storage on 26TB SSD (no cloud costs)
-- **Total Cost**: ~$3-5/month (just photo backup) vs $10-20/month for commercial services
+- **Total Cost**: ~$0.20/month (just cold storage backup) vs $10-20/month for commercial services
 
 ### Architecture
 
-- **Photos**: Local Immich server + AWS S3 backup (critical data, worth protecting)
+- **Photos**: Local SSD (primary) + Glacier Deep Archive (monthly backup, 2 regions)
 - **Everything Else**: 26TB SSD only (movies, TV, books, music - replaceable if lost)
 - **Auto-Start**: All services start automatically on Windows boot
 
@@ -26,7 +26,7 @@ Build a complete home media server and backup solution with minimal monthly cost
 
 ```
 HomeCloud/
-├── photos/                   # Photos & Videos (AWS S3 backup)
+├── photos/                   # Photos & Videos (cold storage backup)
 │   ├── terraform/            # AWS S3 infrastructure
 │   ├── docker/               # Immich server
 │   └── README.md             # Setup guide
@@ -55,7 +55,7 @@ HomeCloud/
 
 | Category | Service | Purpose | Storage |
 |----------|---------|---------|---------|
-| **Photos** | Immich | Photo/video backup with AI search | AWS S3 (cloud backup) |
+| **Photos** | Immich | Photo/video backup | Local SSD + Glacier (cold backup) |
 | **Movies** | Emby | Media server for streaming | 26TB SSD |
 | **Movies** | Jellyseerr | Request management | 26TB SSD |
 | **Movies** | Sonarr | TV show automation | 26TB SSD |
@@ -84,31 +84,29 @@ Windows Computer (26TB SSD)
 │       │           26TB SSD Storage        │
 │       │           (local only)            │
 │       │                                   │
-│       │ Monthly S3 Sync (photos only)     │
+│       │ Monthly Cold Storage Backup       │
 │       └──────────────────┐                │
 └───────────────────────────────────────────┘
                            │
                            ▼
                     ┌─────────────┐
-                    │   AWS S3    │
-                    │ Photo Backup│
+                    │ AWS Glacier │
+                    │ Deep Archive│
                     │             │
-                    │ Primary     │
+                    │ Bucket 1    │
                     │ us-west-1   │
-                    │      │      │
-                    │      │ CRR  │
-                    │      ▼      │
-                    │  Backup     │
+                    │             │
+                    │ Bucket 2    │
                     │ us-west-2   │
-                    │ (Glacier)   │
                     └─────────────┘
 ```
 
 **Key Points:**
-- Only photos/videos backed up to AWS S3 (critical personal data)
+- Local SSD is primary storage for photos (instant access)
+- Monthly backup to Glacier Deep Archive (photos + database, 2 regions)
 - Movies, TV, books, music stored on 26TB SSD only (replaceable content)
 - All services auto-start on Windows boot
-- Monthly cost: ~$1.35 for photo backup (after first month)
+- Monthly cost: ~$0.20 for 100GB cold storage backup
 
 ---
 
