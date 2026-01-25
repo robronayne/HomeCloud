@@ -1,8 +1,8 @@
 # =============================================================================
-# IAM - User and Policies for Local Immich Access to S3
+# IAM - User and Policies for Quarterly Cold Storage Backup
 # =============================================================================
 
-# IAM User for local Immich server to access S3
+# IAM User for s3-sync container to backup to cold storage
 resource "aws_iam_user" "immich" {
   name = "${local.name_prefix}-user"
   tags = local.common_tags
@@ -13,7 +13,7 @@ resource "aws_iam_access_key" "immich" {
   user = aws_iam_user.immich.name
 }
 
-# S3 access policy for Immich user (primary bucket only - backup is read via replication)
+# S3 access policy - write to both cold storage buckets, read for restore
 resource "aws_iam_user_policy" "immich_s3" {
   name = "${local.name_prefix}-s3-access"
   user = aws_iam_user.immich.name
@@ -28,8 +28,8 @@ resource "aws_iam_user_policy" "immich_s3" {
           "s3:GetBucketLocation"
         ]
         Resource = [
-          aws_s3_bucket.primary.arn,
-          aws_s3_bucket.backup.arn
+          aws_s3_bucket.cold_storage_1.arn,
+          aws_s3_bucket.cold_storage_2.arn
         ]
       },
       {
@@ -42,15 +42,10 @@ resource "aws_iam_user_policy" "immich_s3" {
           "s3:ListMultipartUploadParts",
           "s3:AbortMultipartUpload"
         ]
-        Resource = "${aws_s3_bucket.primary.arn}/*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:RestoreObject"
+        Resource = [
+          "${aws_s3_bucket.cold_storage_1.arn}/*",
+          "${aws_s3_bucket.cold_storage_2.arn}/*"
         ]
-        Resource = "${aws_s3_bucket.backup.arn}/*"
       }
     ]
   })

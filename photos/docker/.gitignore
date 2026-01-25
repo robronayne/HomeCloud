@@ -12,6 +12,7 @@ upload/
 model-cache/
 postgres/
 redis/
+db-backup/
 
 # Docker logs
 *.log
