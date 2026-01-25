@@ -1,7 +1,8 @@
 # =============================================================================
-# Immich Docker Compose - Local Server with S3 Storage
+# Immich Docker Compose - Local Server with Cold Storage Backup
 # =============================================================================
-# Run on your computer, stores photos in AWS S3
+# Primary storage: Local SSD
+# Backup: Quarterly sync to Glacier Deep Archive (2 regions)
 # =============================================================================
 
 name: immich
@@ -23,18 +24,6 @@ services:
     depends_on:
       - redis
       - database
-    restart: always
-
-  # ---------------------------------------------------------------------------
-  # Immich Machine Learning (face detection, search)
-  # ---------------------------------------------------------------------------
-  immich-machine-learning:
-    container_name: immich_machine_learning
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
-    volumes:
-      - ./model-cache:/cache
-    env_file:
-      - .env
     restart: always
 
   # ---------------------------------------------------------------------------
@@ -62,31 +51,70 @@ services:
     restart: always
 
   # ---------------------------------------------------------------------------
-  # S3 Sync - Monthly backup to primary bucket
+  # S3 Sync - Monthly backup to Glacier Deep Archive (2 regions)
   # ---------------------------------------------------------------------------
-  # AWS handles replication to backup bucket automatically via CRR
+  # Backs up photos + PostgreSQL database to cold storage
   s3-sync:
     container_name: immich_s3_sync
     image: amazon/aws-cli:latest
     volumes:
       - ./upload:/upload:ro
+      - ./db-backup:/db-backup
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - S3_BUCKET=${S3_BUCKET}
+      - AWS_REGION_1=${AWS_REGION_1}
+      - S3_BUCKET_1=${S3_BUCKET_1}
+      - AWS_REGION_2=${AWS_REGION_2}
+      - S3_BUCKET_2=${S3_BUCKET_2}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         while true; do
-          echo "Syncing local photos to primary S3 bucket..."
-          aws s3 sync /upload s3://$${S3_BUCKET}/upload --storage-class STANDARD_IA
-          echo "Sync complete. Next sync in 30 days."
+          echo "[Monthly Backup] Starting cold storage sync..."
+          
+          echo "Syncing photos to cold storage bucket 1 (us-west-1)..."
+          aws s3 sync /upload s3://$${S3_BUCKET_1}/upload --storage-class DEEP_ARCHIVE --region $${AWS_REGION_1}
+          
+          echo "Syncing photos to cold storage bucket 2 (us-west-2)..."
+          aws s3 sync /upload s3://$${S3_BUCKET_2}/upload --storage-class DEEP_ARCHIVE --region $${AWS_REGION_2}
+          
+          echo "Backing up database..."
+          if [ -f /db-backup/immich-db.sql ]; then
+            aws s3 cp /db-backup/immich-db.sql s3://$${S3_BUCKET_1}/db-backup/immich-db-$$(date +%Y%m%d).sql --storage-class DEEP_ARCHIVE --region $${AWS_REGION_1}
+            aws s3 cp /db-backup/immich-db.sql s3://$${S3_BUCKET_2}/db-backup/immich-db-$$(date +%Y%m%d).sql --storage-class DEEP_ARCHIVE --region $${AWS_REGION_2}
+          fi
+          
+          echo "[Monthly Backup] Complete. Next backup in 30 days."
           sleep 2592000
         done
     restart: always
     depends_on:
       - immich-server
+      - database
+
+  # ---------------------------------------------------------------------------
+  # Database Backup - Creates PostgreSQL dump for s3-sync to upload
+  # ---------------------------------------------------------------------------
+  db-backup:
+    container_name: immich_db_backup
+    image: postgres:14-alpine
+    volumes:
+      - ./db-backup:/db-backup
+    environment:
+      - PGPASSWORD=${DB_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          echo "[DB Backup] Creating PostgreSQL dump..."
+          pg_dump -h database -U $${DB_USERNAME:-postgres} immich > /db-backup/immich-db.sql
+          echo "[DB Backup] Complete. Next dump in 30 days."
+          sleep 2592000
+        done
+    restart: always
+    depends_on:
+      - database
 
 networks:
   default:
