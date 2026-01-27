@@ -10,13 +10,13 @@
 
 Build a complete home media server and backup solution with minimal monthly costs:
 
-- **Photos & Videos**: Local SSD primary + cold storage backup (~$0.20/month for 100GB)
+- **Photos & Videos**: D: drive (Cloud SSD) primary + daily cold storage backup (~$0.20/month for 100GB)
 - **Movies, TV, Books, Music**: Local storage on 26TB SSD (no cloud costs)
 - **Total Cost**: ~$0.20/month (just cold storage backup) vs $10-20/month for commercial services
 
 ### Architecture
 
-- **Photos**: Local SSD (primary) + Glacier Deep Archive (monthly backup, 2 regions)
+- **Photos**: D: drive Cloud SSD (primary) + Glacier Deep Archive (daily backup, 2 regions)
 - **Everything Else**: 26TB SSD only (movies, TV, books, music - replaceable if lost)
 - **Auto-Start**: All services start automatically on Windows boot
 
@@ -55,7 +55,7 @@ HomeCloud/
 
 | Category | Service | Purpose | Storage |
 |----------|---------|---------|---------|
-| **Photos** | Immich | Photo/video backup | Local SSD + Glacier (cold backup) |
+| **Photos** | Immich | Photo/video backup | D: drive (Cloud SSD) + Glacier (daily backup) |
 | **Movies** | Emby | Media server for streaming | 26TB SSD |
 | **Movies** | Jellyseerr | Request management | 26TB SSD |
 | **Movies** | Sonarr | TV show automation | 26TB SSD |
@@ -69,8 +69,8 @@ HomeCloud/
 ## Architecture
 
 ```
-Windows Computer (26TB SSD)
-────────────────────────────
+Windows Computer + D: Drive (Cloud SSD)
+───────────────────────────────────────
 ┌───────────────────────────────────────────┐
 │  Docker Containers (Auto-start on boot)   │
 │                                           │
@@ -81,8 +81,8 @@ Windows Computer (26TB SSD)
 │       │            │            │         │
 │       │            └─────┬──────┘         │
 │       │                  │                │
-│       │           26TB SSD Storage        │
-│       │           (local only)            │
+│       │      D: Drive (Cloud SSD)        │
+│       │      D:\immich\upload             │
 │       │                                   │
 │       │ Monthly Cold Storage Backup       │
 │       └──────────────────┐                │
@@ -102,11 +102,11 @@ Windows Computer (26TB SSD)
 ```
 
 **Key Points:**
-- Local SSD is primary storage for photos (instant access)
-- Monthly backup to Glacier Deep Archive (photos + database, 2 regions)
+- D: drive (Cloud SSD) is primary storage for photos at `D:\immich\upload`
+- Daily backup to Glacier Deep Archive (photos + database, 2 regions)
 - Movies, TV, books, music stored on 26TB SSD only (replaceable content)
 - All services auto-start on Windows boot
-- Monthly cost: ~$0.20 for 100GB cold storage backup
+- Monthly cost: ~$0.20 for 100GB cold storage backup (daily backups)
 
 ---
 
