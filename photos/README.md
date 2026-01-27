@@ -1,6 +1,6 @@
 # Immich Photo Backup - Local Primary + Cold Storage
 
-Run [Immich](https://immich.app/) on your computer with local SSD as primary storage and AWS Glacier Deep Archive for monthly disaster recovery backups.
+Run [Immich](https://immich.app/) on your computer with D: drive Cloud SSD as primary storage and AWS Glacier Deep Archive for daily disaster recovery backups.
 
 **Cost: ~$0.20/month per 100GB**
 
@@ -18,14 +18,14 @@ Run [Immich](https://immich.app/) on your computer with local SSD as primary sto
 │  │  │ :2283    │            │        │                │     │
 │  │  └──────────┴────────────┴────────┘                │     │
 │  │                                                    │     │
-│  │  S3 Sync (monthly cold storage backup)             │     │
+│  │  S3 Sync (daily cold storage backup)               │     │
 │  └────────────────────────────────────────────────────┘     │
 │                                                             │
-│  LOCAL SSD (PRIMARY STORAGE)                                │
-│  └── upload/  ← All photos stored here                      │
+│  D: DRIVE - CLOUD SSD (PRIMARY STORAGE)                     │
+│  └── D:\immich\upload  ← All photos stored here             │
 └──────────────────────────┬──────────────────────────────────┘
                            │
-                           │ Monthly backup (every 30 days)
+                           │ Daily backup (every 24 hours)
                            ▼
     ┌──────────────────────────────────────────────────────────┐
     │                   AWS COLD STORAGE                       │
@@ -38,7 +38,7 @@ Run [Immich](https://immich.app/) on your computer with local SSD as primary sto
     │   │ $0.00099/GB/mo  │        │ $0.00099/GB/mo  │         │
     │   └─────────────────┘        └─────────────────┘         │
     │                                                          │
-    │   Both buckets synced monthly from local                 │
+    │   Both buckets synced daily from local                   │
     └──────────────────────────────────────────────────────────┘
 ```
 
@@ -63,11 +63,11 @@ Run [Immich](https://immich.app/) on your computer with local SSD as primary sto
     │                      └────┬─────┘                        │
     │                           │                              │
     │                      ┌────▼─────────┐                    │
-    │                      │  LOCAL SSD   │                    │
-    │                      │  (primary)   │                    │
+    │                      │ D: DRIVE     │                    │
+    │                      │ (Cloud SSD)  │                    │
     │                      └────┬─────────┘                    │
     │                           │                              │
-    │                           │  2. Monthly backup           │
+    │                           │  2. Daily backup             │
     │                      ┌────▼─────┐                        │
     │                      │ s3-sync  │                        │
     │                      │container │                        │
@@ -92,9 +92,9 @@ Run [Immich](https://immich.app/) on your computer with local SSD as primary sto
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │  KEY POINTS:                                                         │
-│  • Photos + database stored on LOCAL SSD (instant access)            │
-│  • Monthly backup to Glacier Deep Archive (2 regions)                │
-│  • Max data loss: 30 days (time between monthly backups)             │
+│  • Photos + database stored on D: drive (Cloud SSD)              │
+│  • Daily backup to Glacier Deep Archive (2 regions)                │
+│  • Max data loss: 24 hours (time between daily backups)             │
 │  • Restore time: 12-48 hours (Glacier retrieval)                     │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -207,7 +207,7 @@ ipconfig getifaddr en0                 ipconfig | findstr IPv4
 # macOS/Linux
 aws s3 sync s3://YOUR_BUCKET/upload /path/to/new/ssd/upload
 
-# Windows
+# Windows (to D: drive Cloud SSD)
 aws s3 sync s3://YOUR_BUCKET/upload D:\immich\upload
 ```
 

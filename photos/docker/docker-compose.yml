@@ -1,8 +1,8 @@
 # =============================================================================
 # Immich Docker Compose - Local Server with Cold Storage Backup
 # =============================================================================
-# Primary storage: Local SSD
-# Backup: Quarterly sync to Glacier Deep Archive (2 regions)
+# Primary storage: D: drive (Cloud SSD) at D:\immich\upload
+# Backup: Daily sync to Glacier Deep Archive (2 regions)
 # =============================================================================
 
 name: immich
@@ -15,7 +15,7 @@ services:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     volumes:
-      - ./upload:/usr/src/app/upload
+      - D:/immich/upload:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - .env
@@ -51,14 +51,14 @@ services:
     restart: always
 
   # ---------------------------------------------------------------------------
-  # S3 Sync - Monthly backup to Glacier Deep Archive (2 regions)
+  # S3 Sync - Daily backup to Glacier Deep Archive (2 regions)
   # ---------------------------------------------------------------------------
-  # Backs up photos + PostgreSQL database to cold storage
+  # Backs up photos + PostgreSQL database to cold storage every 24 hours
   s3-sync:
     container_name: immich_s3_sync
-    image: amazon/aws-cli:latest
+    image: alpine:latest
     volumes:
-      - ./upload:/upload:ro
+      - D:/immich/upload:/upload:ro
       - ./db-backup:/db-backup
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -67,27 +67,43 @@ services:
       - S3_BUCKET_1=${S3_BUCKET_1}
       - AWS_REGION_2=${AWS_REGION_2}
       - S3_BUCKET_2=${S3_BUCKET_2}
+      - TZ=America/Los_Angeles
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        while true; do
-          echo "[Monthly Backup] Starting cold storage sync..."
-          
-          echo "Syncing photos to cold storage bucket 1 (us-west-1)..."
-          aws s3 sync /upload s3://$${S3_BUCKET_1}/upload --storage-class DEEP_ARCHIVE --region $${AWS_REGION_1}
-          
-          echo "Syncing photos to cold storage bucket 2 (us-west-2)..."
-          aws s3 sync /upload s3://$${S3_BUCKET_2}/upload --storage-class DEEP_ARCHIVE --region $${AWS_REGION_2}
-          
-          echo "Backing up database..."
-          if [ -f /db-backup/immich-db.sql ]; then
-            aws s3 cp /db-backup/immich-db.sql s3://$${S3_BUCKET_1}/db-backup/immich-db-$$(date +%Y%m%d).sql --storage-class DEEP_ARCHIVE --region $${AWS_REGION_1}
-            aws s3 cp /db-backup/immich-db.sql s3://$${S3_BUCKET_2}/db-backup/immich-db-$$(date +%Y%m%d).sql --storage-class DEEP_ARCHIVE --region $${AWS_REGION_2}
-          fi
-          
-          echo "[Monthly Backup] Complete. Next backup in 30 days."
-          sleep 2592000
-        done
+        # Install AWS CLI and dcron
+        apk add --no-cache aws-cli dcron
+        
+        # Create backup script
+        cat > /backup.sh << 'EOF'
+        #!/bin/sh
+        echo "[Daily Backup - 2am PST] Starting cold storage sync..."
+        
+        echo "Syncing photos to cold storage bucket 1 (us-west-1)..."
+        aws s3 sync /upload s3://$${S3_BUCKET_1}/upload --storage-class DEEP_ARCHIVE --region $${AWS_REGION_1}
+        
+        echo "Syncing photos to cold storage bucket 2 (us-west-2)..."
+        aws s3 sync /upload s3://$${S3_BUCKET_2}/upload --storage-class DEEP_ARCHIVE --region $${AWS_REGION_2}
+        
+        echo "Backing up database..."
+        if [ -f /db-backup/immich-db.sql ]; then
+          aws s3 cp /db-backup/immich-db.sql s3://$${S3_BUCKET_1}/db-backup/immich-db-$$(date +%Y%m%d).sql --storage-class DEEP_ARCHIVE --region $${AWS_REGION_1}
+          aws s3 cp /db-backup/immich-db.sql s3://$${S3_BUCKET_2}/db-backup/immich-db-$$(date +%Y%m%d).sql --storage-class DEEP_ARCHIVE --region $${AWS_REGION_2}
+        fi
+        
+        echo "[Daily Backup] Complete. Next backup tomorrow at 2am PST."
+        EOF
+        
+        chmod +x /backup.sh
+        
+        # Add cron job for 2am PST daily
+        echo "0 2 * * * /backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+        
+        # Run backup immediately on startup
+        /backup.sh
+        
+        # Start cron in foreground
+        crond -f -l 2
     restart: always
     depends_on:
       - immich-server
@@ -103,15 +119,28 @@ services:
       - ./db-backup:/db-backup
     environment:
       - PGPASSWORD=${DB_PASSWORD}
+      - TZ=America/Los_Angeles
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        while true; do
-          echo "[DB Backup] Creating PostgreSQL dump..."
-          pg_dump -h database -U $${DB_USERNAME:-postgres} immich > /db-backup/immich-db.sql
-          echo "[DB Backup] Complete. Next dump in 30 days."
-          sleep 2592000
-        done
+        # Create backup script
+        cat > /db-backup.sh << 'EOF'
+        #!/bin/sh
+        echo "[DB Backup - 2am PST] Creating PostgreSQL dump..."
+        pg_dump -h database -U ${DB_USERNAME:-postgres} immich > /db-backup/immich-db.sql
+        echo "[DB Backup] Complete. Next dump tomorrow at 2am PST."
+        EOF
+        
+        chmod +x /db-backup.sh
+        
+        # Add cron job for 2am PST daily
+        echo "0 2 * * * /db-backup.sh >> /var/log/db-backup.log 2>&1" > /etc/crontabs/root
+        
+        # Run backup immediately on startup
+        /db-backup.sh
+        
+        # Start cron in foreground
+        crond -f -l 2
     restart: always
     depends_on:
       - database
