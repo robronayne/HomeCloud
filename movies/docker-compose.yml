@@ -3,10 +3,10 @@
 # =============================================================================
 # Emby:      http://localhost:8096  - Media server
 # Ombi:      http://localhost:5000  - Request manager (works with Emby)
-# Sonarr:    http://localhost:8989  - TV show manager
-# Radarr:    http://localhost:7878  - Movie manager
-# Prowlarr:  http://localhost:9696  - Indexer manager
-# qBittorrent: http://localhost:8080 - Torrent client (via VPN)
+# Sonarr:    http://localhost:8989  - TV show library manager
+# Radarr:    http://localhost:7878  - Movie library manager
+# Prowlarr:  http://localhost:9696  - Indexer/source manager
+# qBittorrent: http://localhost:8080 - Download client (via VPN)
 # =============================================================================
 
 services:
@@ -47,7 +47,7 @@ services:
       - ./ombi:/config
 
   # ---------------------------------------------------------------------------
-  # Sonarr - TV Show Manager
+  # Sonarr - TV Show Library Manager
   # ---------------------------------------------------------------------------
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
@@ -65,7 +65,7 @@ services:
       - D:/downloads:/downloads
 
   # ---------------------------------------------------------------------------
-  # Radarr - Movie Manager
+  # Radarr - Movie Library Manager
   # ---------------------------------------------------------------------------
   radarr:
     image: lscr.io/linuxserver/radarr:latest
@@ -83,7 +83,7 @@ services:
       - D:/downloads:/downloads
 
   # ---------------------------------------------------------------------------
-  # Prowlarr - Indexer Manager (searches for content)
+  # Prowlarr - Indexer/Source Manager
   # ---------------------------------------------------------------------------
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -99,7 +99,7 @@ services:
       - ./prowlarr:/config
 
   # ---------------------------------------------------------------------------
-  # qBittorrent with ProtonVPN - Torrent Client (all traffic through VPN)
+  # qBittorrent with ProtonVPN - Download Client (all traffic through VPN)
   # ---------------------------------------------------------------------------
   # NOTE: You need to set these environment variables in a .env file:
   #   PROTONVPN_USERNAME=your_openvpn_username
