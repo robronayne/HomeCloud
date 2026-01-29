@@ -1,6 +1,15 @@
 # Media Stack - Emby + Arr Suite
 
-Self-hosted media server with automated content management and VPN-protected downloads.
+Self-hosted media server with automated library management and privacy-focused download client.
+
+> **⚠️ Legal Notice**  
+> This stack is designed for managing legally obtained media content. Users must ensure compliance with all applicable copyright laws and terms of service. Legitimate use cases include:
+> - Managing personal media collections (home videos, purchased content)
+> - Downloading content from legal sources (public domain, Creative Commons)
+> - Organizing media you own physical copies of
+> - Accessing content through legitimate subscription services
+>
+> The VPN component is provided for privacy protection, not to facilitate illegal activity.
 
 ## Architecture
 
@@ -10,8 +19,8 @@ Self-hosted media server with automated content management and VPN-protected dow
 └──────────────────────────────────────────────────────────────────────┘
 
     User Request        Ombi          Sonarr/Radarr      Prowlarr
-    "I want to   ──►  (Request   ──►  (Manages      ──►  (Searches
-     watch X"         Manager)        Downloads)         Indexers)
+    "Add to     ──►  (Request   ──►  (Library      ──►  (Searches
+     library"         Manager)        Management)        Sources)
                                            │
                                            ▼
                                     ┌─────────────┐
@@ -40,10 +49,10 @@ Self-hosted media server with automated content management and VPN-protected dow
 |---------|------|---------|
 | Emby | 8096 | Media server |
 | Ombi | 5000 | Request manager |
-| Sonarr | 8989 | TV show manager |
-| Radarr | 7878 | Movie manager |
-| Prowlarr | 9696 | Indexer manager |
-| qBittorrent | 8080 | Torrent client |
+| Sonarr | 8989 | TV show library manager |
+| Radarr | 7878 | Movie library manager |
+| Prowlarr | 9696 | Indexer/source manager |
+| qBittorrent | 8080 | Download client (BitTorrent) |
 
 ## Setup
 
@@ -74,18 +83,18 @@ Self-hosted media server with automated content management and VPN-protected dow
 4. Login with **admin** / **[temp password]**
 5. **Change password immediately**: Options → Web UI → Authentication → Save
 
-### Step 3: Prowlarr - Add Indexers
+### Step 3: Prowlarr - Configure Indexers
 
 1. Open http://localhost:9696
 2. Go to **Indexers** → **Add Indexer**
-3. Add public indexers (these work without CloudFlare issues):
-   - **YTS** (movies)
-   - **EZTV** (TV shows)
-   - **TorrentGalaxy** (both)
-   - **LimeTorrents** (both)
-4. Click **Test All** to verify (green checkmark = working)
+3. Configure indexers for your legal content sources
+4. Examples of legitimate indexers:
+   - Public domain content repositories
+   - Creative Commons media libraries
+   - Legal torrent distributions (Linux ISOs, open source software, etc.)
+5. Click **Test All** to verify connectivity
 
-### Step 4: Sonarr - TV Show Manager
+### Step 4: Sonarr - TV Show Library Manager
 
 1. Open http://localhost:8989
 2. **Settings** → **General** → Copy **API Key** (save for later)
@@ -100,7 +109,7 @@ Self-hosted media server with automated content management and VPN-protected dow
 5. **Settings** → **Media Management** → **Root Folders**
 6. **Add Root Folder** → Enter: `/tv` → **Save**
 
-### Step 5: Radarr - Movie Manager
+### Step 5: Radarr - Movie Library Manager
 
 1. Open http://localhost:7878
 2. **Settings** → **General** → Copy **API Key** (save for later)
@@ -175,11 +184,11 @@ Self-hosted media server with automated content management and VPN-protected dow
 
 ### Step 9: Test the System
 
-1. In Ombi, search for a movie or TV show
-2. Click **Request**
+1. In Ombi, search for content in your library
+2. Click **Request** to add to your collection
 3. Check Radarr/Sonarr for the new entry
-4. Watch it download in qBittorrent (http://localhost:8080)
-5. Once complete, it appears in Emby!
+4. Monitor the download progress in qBittorrent (http://localhost:8080)
+5. Once complete, content appears in Emby for streaming
 
 ## Storage
 

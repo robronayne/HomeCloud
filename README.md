@@ -4,6 +4,9 @@
 
 **Self-hosted home cloud solution for cost-effective media management and backups.**
 
+> **⚠️ Legal Disclaimer**  
+> This project provides infrastructure for managing your personal media library. Users are solely responsible for ensuring their use complies with all applicable laws and regulations. This software is intended for managing legally obtained content only, including personal media, home videos, purchased content, and content from legitimate sources. The project maintainers do not condone or support copyright infringement.
+
 ---
 
 ## Project Goals
@@ -32,7 +35,7 @@ HomeCloud/
 │   └── README.md             # Setup guide
 │
 ├── movies/                   # Movies & TV Shows (26TB SSD)
-│   ├── docker/               # Emby, Jellyseerr, Sonarr, Radarr
+│   ├── docker-compose.yml    # Emby, Ombi, Sonarr, Radarr, Prowlarr, qBittorrent
 │   └── README.md             # Setup guide
 │
 ├── books/                    # Books & Audiobooks (26TB SSD)
@@ -57,9 +60,11 @@ HomeCloud/
 |----------|---------|---------|---------|
 | **Photos** | Immich | Photo/video backup | D: drive (Cloud SSD) + Glacier (daily backup) |
 | **Movies** | Emby | Media server for streaming | 26TB SSD |
-| **Movies** | Jellyseerr | Request management | 26TB SSD |
-| **Movies** | Sonarr | TV show automation | 26TB SSD |
-| **Movies** | Radarr | Movie automation | 26TB SSD |
+| **Movies** | Ombi | Request management | 26TB SSD |
+| **Movies** | Sonarr | TV show library management | 26TB SSD |
+| **Movies** | Radarr | Movie library management | 26TB SSD |
+| **Movies** | Prowlarr | Indexer management | 26TB SSD |
+| **Movies** | qBittorrent | Download client | 26TB SSD |
 | **Books** | LazyLibrarian | Book management | 26TB SSD |
 | **Books** | Calibre | eBook server | 26TB SSD |
 | **Music** | Navidrome | Music streaming | 26TB SSD |
