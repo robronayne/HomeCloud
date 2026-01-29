@@ -92,9 +92,9 @@ Run [Immich](https://immich.app/) on your computer with D: drive Cloud SSD as pr
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │  KEY POINTS:                                                         │
-│  • Photos + database stored on D: drive (Cloud SSD)              │
-│  • Daily backup to Glacier Deep Archive (2 regions)                │
-│  • Max data loss: 24 hours (time between daily backups)             │
+│  • Photos + database stored on D: drive (Cloud SSD)                  │
+│  • Daily backup to Glacier Deep Archive (2 regions)                  │
+│  • Max data loss: 24 hours (time between daily backups)              │
 │  • Restore time: 12-48 hours (Glacier retrieval)                     │
 └──────────────────────────────────────────────────────────────────────┘
 ```
