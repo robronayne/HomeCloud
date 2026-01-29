@@ -1,0 +1,144 @@
+# =============================================================================
+# Media Stack - Emby + Arr Suite + qBittorrent with ProtonVPN
+# =============================================================================
+# Emby:      http://localhost:8096  - Media server
+# Ombi:      http://localhost:5000  - Request manager (works with Emby)
+# Sonarr:    http://localhost:8989  - TV show manager
+# Radarr:    http://localhost:7878  - Movie manager
+# Prowlarr:  http://localhost:9696  - Indexer manager
+# qBittorrent: http://localhost:8080 - Torrent client (via VPN)
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Emby - Media Server
+  # ---------------------------------------------------------------------------
+  emby:
+    image: emby/embyserver:latest
+    container_name: emby
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+    ports:
+      - "8096:8096"   # HTTP
+      - "8920:8920"   # HTTPS
+    volumes:
+      - ./emby:/config
+      - D:/movies:/mnt/movies
+      - D:/tv:/mnt/tv
+      - D:/downloads:/mnt/downloads
+
+  # ---------------------------------------------------------------------------
+  # Ombi - Request Manager (Emby-compatible alternative to Jellyseerr)
+  # ---------------------------------------------------------------------------
+  ombi:
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+    ports:
+      - "5000:3579"
+    volumes:
+      - ./ombi:/config
+
+  # ---------------------------------------------------------------------------
+  # Sonarr - TV Show Manager
+  # ---------------------------------------------------------------------------
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+    ports:
+      - "8989:8989"
+    volumes:
+      - ./sonarr:/config
+      - D:/tv:/tv
+      - D:/downloads:/downloads
+
+  # ---------------------------------------------------------------------------
+  # Radarr - Movie Manager
+  # ---------------------------------------------------------------------------
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+    ports:
+      - "7878:7878"
+    volumes:
+      - ./radarr:/config
+      - D:/movies:/movies
+      - D:/downloads:/downloads
+
+  # ---------------------------------------------------------------------------
+  # Prowlarr - Indexer Manager (searches for content)
+  # ---------------------------------------------------------------------------
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+    ports:
+      - "9696:9696"
+    volumes:
+      - ./prowlarr:/config
+
+  # ---------------------------------------------------------------------------
+  # qBittorrent with ProtonVPN - Torrent Client (all traffic through VPN)
+  # ---------------------------------------------------------------------------
+  # NOTE: You need to set these environment variables in a .env file:
+  #   PROTONVPN_USERNAME=your_openvpn_username
+  #   PROTONVPN_PASSWORD=your_openvpn_password
+  # Get OpenVPN credentials from: https://account.protonvpn.com/account#openvpn
+  # ---------------------------------------------------------------------------
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - OPENVPN_USER=${PROTONVPN_USERNAME}
+      - OPENVPN_PASSWORD=${PROTONVPN_PASSWORD}
+      - SERVER_COUNTRIES=United States
+      - TZ=America/Los_Angeles
+    ports:
+      - "8080:8080"   # qBittorrent Web UI
+      - "6881:6881"   # qBittorrent TCP
+      - "6881:6881/udp" # qBittorrent UDP
+    volumes:
+      - ./gluetun:/gluetun
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"  # Route ALL traffic through VPN
+    depends_on:
+      - gluetun
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - WEBUI_PORT=8080
+    volumes:
+      - ./qbittorrent:/config
+      - D:/downloads:/downloads

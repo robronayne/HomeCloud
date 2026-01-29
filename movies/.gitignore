@@ -1,0 +1,26 @@
+# Media Stack - Service Configurations
+# =============================================================================
+
+# Emby (media server)
+emby/
+
+# Ombi (request manager)
+ombi/
+
+# Sonarr (TV manager)
+sonarr/
+
+# Radarr (movie manager)
+radarr/
+
+# Prowlarr (indexer manager)
+prowlarr/
+
+# qBittorrent (torrent client)
+qbittorrent/
+
+# Gluetun (VPN container)
+gluetun/
+
+# Environment file with secrets
+.env
